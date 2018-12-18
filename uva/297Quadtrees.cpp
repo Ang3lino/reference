@@ -1,7 +1,9 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
 
+#include <stdio.h>
 #include <stdlib.h>
 
 using namespace std;
@@ -34,6 +36,18 @@ struct KNode {
 
 };
 
+template<typename T> 
+void preorder(KNode<T> *node) {
+    if (node == nullptr) {
+        //printf("nil-");
+    } else {
+        cout << "" << node->data << "-";
+        for (int i = 0; i < node->children.size(); ++i) {
+            preorder(node->children[i]);
+        }
+    }
+}
+
 // helper function
 KNode<char> *_deserialize(const string &src, int &pos) {
     if (pos >= src.size()) return nullptr;
@@ -53,7 +67,7 @@ KNode<char> *_deserialize(const string &src, int &pos) {
 
 inline KNode<char> *deserialize(const string &src) {
     int zero = 0;
-    return _deserialize(src, zero);
+    return _deserialize(src, zero)->children[0];
 }
 
 /**
@@ -71,9 +85,8 @@ inline KNode<char> *deserialize(const string &src) {
 KNode<char> *interpolate_quadtrees(KNode<char> *&a, KNode<char> *&b) {  
     vector<KNode<char> *> children(4);
     for (int i = 0; i < 4; ++i) {
-        char x = a->children[i]->data; 
-        char y = b->children[i]->data; // aliases
-        if (x == 'p' && y == 'p')
+        char x = a->children[i]->data, y = b->children[i]->data; // aliases
+        if (x == 'p' and y == 'p')
             children[i] = interpolate_quadtrees(a->children[i], b->children[i]);
         else if (x == 'f') children[i] = a->children[i];
         else if (y == 'f') children[i] = b->children[i];
@@ -88,47 +101,64 @@ KNode<char> *interpolate_quadtrees(KNode<char> *&a, KNode<char> *&b) {
 
 int sum_pixels( KNode<char> *&root, int amount = 1024) {
     int sum = 0;
-    for (auto x: root->children) {
-        if (x == nullptr) break;
-        if (x->data == 'p') sum += sum_pixels(x, amount >> 2);
-        if (x->data == 'f') sum += amount;
-    }
+    if (root->data == 'p') {
+        for (auto x: root->children) {
+            if (x == nullptr) continue;
+            sum += sum_pixels(x, amount >> 2);
+        }
+    } 
+    if (root->data == 'f') sum += amount;
     return sum;
+}
+
+template<typename T> 
+void delete_ktree(KNode<T> *&node) {
+    if (node == nullptr) return;
+    for (int i = 0; i < node->children.size(); ++i)
+        delete_ktree(node->children[i]);
+    delete node;
 }
 
 void test() {
     string s1, s2;
-    KNode<char> *tree1, *tree2, *result;
+    array<KNode<char> *, 3> trees;
 
     //string s1 = "ppeeefpffeefe", s2 = "pefepeefe";
     //string s1 = "peeef", s2 = "peefe";
     //string s1 = "peeef", s2 = "peepefefe";
 
     s1 = "ppeeefpffeefe", s2 = "pefepeefe";
-    tree1 = deserialize(s1);
-    tree2 = deserialize(s2);
-    result = interpolate_quadtrees(tree1, tree2);
-    cout << sum_pixels(result) << endl;
+    trees[0] = deserialize(s1);
+    cout << sum_pixels(trees[0]) << endl;
+    trees[1] = deserialize(s2);
+    cout << sum_pixels(trees[1]) << endl;
+    trees[2] = interpolate_quadtrees(trees[0], trees[1]);
+    cout << sum_pixels(trees[2]) << endl;
+
+    delete_ktree(trees[0]);
+
+    for (int i = 0; i < 3; ++i) {
+        cout << endl;
+        preorder(trees[i]);
+        cout << endl;
+    }
 
     s1 = "peeef", s2 = "peefe";
-    tree1 = deserialize(s1);
-    tree2 = deserialize(s2);
-    result = interpolate_quadtrees(tree1, tree2);
-    cout << sum_pixels(result) << endl;
+    trees[0] = deserialize(s1);
+    trees[1] = deserialize(s2);
+    trees[2] = interpolate_quadtrees(trees[0], trees[1]);
+    cout << sum_pixels(trees[2]) << endl;
 
     // s1 = "peeef", s2 = "peepefefe";
-    // tree1 = deserialize(s1);
-    // tree2 = deserialize(s2);
-    // result = interpolate_quadtrees(tree1, tree2);
-    // cout << sum_pixels(result) << endl;
+    // trees[0] = deserialize(s1);
+    // trees[1] = deserialize(s2);
+    // trees[2] = interpolate_quadtrees(trees[0], trees[1]);
+    // cout << sum_pixels(trees[2]) << endl;
 
 }
 
-void ask_parameters();
-
 int main(int argc, char const *argv[]) {
     test();
-    //ask_parameters();
     return 0;
 }
 
@@ -143,10 +173,20 @@ void ask_parameters() {
         auto tree2 = deserialize(s2);
         auto result = interpolate_quadtrees(tree1, tree2);
         cout << "There are " << sum_pixels(result) << " black pixels." << endl;
+        delete_ktree(tree1);
+        delete_ktree(tree2);
+        delete_ktree(result);
     }
 }
 
-// ppeeefpffeefe
-// pefepeefe
+/*
 
-// ppeeefffpeefe
+3
+ppeeefpffeefe
+pefepeefe
+peeef
+peefe
+peeef
+peepefefe
+
+*/
