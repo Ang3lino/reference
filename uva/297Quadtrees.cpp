@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <map>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,22 +53,20 @@ void preorder(KNode<T> *node) {
 KNode<char> *_deserialize(const string &src, int &pos) {
     if (pos >= src.size()) return nullptr;
     vector<KNode<char> *> children(4);
-    for (int i = 0; i < 4; ++i) {
-        if (src[pos] == 'p') 
-            children[i] = _deserialize(src, ++pos);
-        else {
-            children[i] = new KNode<char>(4, src[pos]);
-            ++pos;
-        }
-    }
-    auto node = new KNode<char>(children);
-    node->data = 'p';
-    return node;
+    const char token = src[pos++];
+    if (token == 'p') {
+        for (int i = 0; i < 4; ++i)
+            children[i] = _deserialize(src, pos);
+        auto node = new KNode<char> (children);
+        node->data = token;
+        return node;
+    } // else it is a full or empty pixel
+    return new KNode<char> (4, token);
 }
 
-inline KNode<char> *deserialize(const string &src) {
+KNode<char> *deserialize(const string &src) {
     int zero = 0;
-    return _deserialize(src, zero)->children[0];
+    return _deserialize(src, zero);
 }
 
 /**
@@ -82,21 +81,26 @@ inline KNode<char> *deserialize(const string &src) {
  * fp
  * pf
  */
-KNode<char> *interpolate_quadtrees(KNode<char> *&a, KNode<char> *&b) {  
-    vector<KNode<char> *> children(4);
-    for (int i = 0; i < 4; ++i) {
-        char x = a->children[i]->data, y = b->children[i]->data; // aliases
-        if (x == 'p' and y == 'p')
+KNode<char> *interpolate_quadtrees(KNode<char> *&a, KNode<char> *&b) {
+    if (a != nullptr and b == nullptr) return a;
+    if (a == nullptr and b != nullptr) return b;
+    if (a == nullptr and b == nullptr) return nullptr;
+
+    // both a and b are not nullptr
+    if (a->data == 'f') return a;
+    if (b->data == 'f') return b;
+    if (a->data == 'p' and b->data == 'p') {
+        vector<KNode<char> *> children(4);
+        for (int i = 0; i < 4; ++i) {
             children[i] = interpolate_quadtrees(a->children[i], b->children[i]);
-        else if (x == 'f') children[i] = a->children[i];
-        else if (y == 'f') children[i] = b->children[i];
-        else if (x == 'p') children[i] = a->children[i];
-        else if (y == 'p') children[i] = b->children[i];
-        else children[i] = a->children[i]; // x is e and y is e
-    }    
-    auto node = new KNode<char>(children);
-    node->data = 'p';
-    return node;
+        }
+        auto node = new KNode<char>(children);
+        node->data = 'p';
+        return node;
+    }
+    if (a->data == 'p') return a;
+    if (b->data == 'p') return b;
+    return a; // or b, we don't care given that a is e and b is e
 }
 
 int sum_pixels( KNode<char> *&root, int amount = 1024) {
@@ -135,19 +139,17 @@ void test() {
     trees[2] = interpolate_quadtrees(trees[0], trees[1]);
     cout << sum_pixels(trees[2]) << endl;
 
-    delete_ktree(trees[0]);
-
     for (int i = 0; i < 3; ++i) {
         cout << endl;
         preorder(trees[i]);
         cout << endl;
     }
 
-    s1 = "peeef", s2 = "peefe";
-    trees[0] = deserialize(s1);
-    trees[1] = deserialize(s2);
-    trees[2] = interpolate_quadtrees(trees[0], trees[1]);
-    cout << sum_pixels(trees[2]) << endl;
+    // s1 = "peeef", s2 = "peefe";
+    // trees[0] = deserialize(s1);
+    // trees[1] = deserialize(s2);
+    // trees[2] = interpolate_quadtrees(trees[0], trees[1]);
+    // cout << sum_pixels(trees[2]) << endl;
 
     // s1 = "peeef", s2 = "peepefefe";
     // trees[0] = deserialize(s1);
@@ -157,10 +159,6 @@ void test() {
 
 }
 
-int main(int argc, char const *argv[]) {
-    test();
-    return 0;
-}
 
 void ask_parameters() {
     int n;
@@ -173,10 +171,13 @@ void ask_parameters() {
         auto tree2 = deserialize(s2);
         auto result = interpolate_quadtrees(tree1, tree2);
         cout << "There are " << sum_pixels(result) << " black pixels." << endl;
-        delete_ktree(tree1);
-        delete_ktree(tree2);
-        delete_ktree(result);
     }
+}
+
+int main(int argc, char const *argv[]) {
+    //test();
+    ask_parameters();
+    return 0;
 }
 
 /*
