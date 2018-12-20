@@ -1,8 +1,12 @@
 
+/**
+ * Quadtree problem solved by using real N-ary trees and recursion.
+ * @Author: Angel Manriquez.
+ */
+
 #include <iostream>
 #include <vector>
-#include <array>
-#include <map>
+#include <array> // an improvement of a typical array of c
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +36,11 @@ struct KNode {
         curr_pos = _children.size();
     }
 
-    inline void append(const vector<KNode *> &_children) { children = _children; }
+    void append(const vector<KNode *> &_children) { 
+        children = _children; 
+        curr_pos = _children.size(); 
+    }
+
     inline void append(const KNode son) { children[curr_pos++] = son; }
 
 };
@@ -53,7 +61,7 @@ void preorder(KNode<T> *node) {
 KNode<char> *_deserialize(const string &src, int &pos) {
     if (pos >= src.size()) return nullptr;
     vector<KNode<char> *> children(4);
-    const char token = src[pos++];
+    const char token = src[pos++]; // once we read a char we increment its position by one
     if (token == 'p') {
         for (int i = 0; i < 4; ++i)
             children[i] = _deserialize(src, pos);
@@ -86,10 +94,10 @@ KNode<char> *interpolate_quadtrees(KNode<char> *&a, KNode<char> *&b) {
     if (a == nullptr and b != nullptr) return b;
     if (a == nullptr and b == nullptr) return nullptr;
 
-    // both a and b are not nullptr
+    // both a and b are not nullptr. Priority order is such that f > p > e
     if (a->data == 'f') return a;
     if (b->data == 'f') return b;
-    if (a->data == 'p' and b->data == 'p') {
+    if (a->data == 'p' and b->data == 'p') { // select the most "blacked" subtree from their children
         vector<KNode<char> *> children(4);
         for (int i = 0; i < 4; ++i) {
             children[i] = interpolate_quadtrees(a->children[i], b->children[i]);
@@ -121,6 +129,7 @@ void delete_ktree(KNode<T> *&node) {
     for (int i = 0; i < node->children.size(); ++i)
         delete_ktree(node->children[i]);
     delete node;
+    node = nullptr;
 }
 
 void test() {
@@ -159,7 +168,6 @@ void test() {
 
 }
 
-
 void ask_parameters() {
     int n;
     cin >> n;
@@ -171,6 +179,8 @@ void ask_parameters() {
         auto tree2 = deserialize(s2);
         auto result = interpolate_quadtrees(tree1, tree2);
         cout << "There are " << sum_pixels(result) << " black pixels." << endl;
+        delete_ktree(tree1); // delete the memory allocated in the heap
+        delete_ktree(tree2); 
     }
 }
 
